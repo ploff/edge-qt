@@ -64,7 +64,7 @@ MainWindow::~MainWindow()
 void MainWindow::setupUI()
 {
     setWindowTitle("ZET/ARDOR GAMING Edge configurator");
-    setMinimumSize(500, 600);
+    setMinimumSize(550, 600);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
@@ -201,7 +201,7 @@ QGroupBox* MainWindow::createLedGroup() {
     ledBrightnessSlider->setTickPosition(QSlider::TicksBelow);
     ledBrightnessSlider->setTickInterval(1);
 
-    ledColorButton = new QPushButton("choose color");
+    ledColorButton = new QPushButton("select color");
     ledColorSwatch = new QLabel();
     ledColorSwatch->setFixedSize(40, 20);
     ledColorSwatch->setAutoFillBackground(true);
@@ -297,7 +297,7 @@ hid_device* MainWindow::findAndOpenDevice()
     hid_free_enumeration(devs);
 
     if (!opened_device) {
-        statusLabel->setText("error: mouse founded, but can't find working interface. do you set udev rules?");
+        statusLabel->setText("error: mouse was found, but can't find working interface. have you set udev rules?");
     }
     return opened_device;
 }
@@ -478,7 +478,7 @@ void MainWindow::updatePayloadFromUi()
 vector<uint8_t> MainWindow::factorySettingsPayload() {
     return {
         0xa0, 0x01, 0x02, // WriteCFG command
-        0x01,             // ActiveDPIIndex: active level 2
+        0x00,             // ActiveDPIIndex: active level 2
         0x02,             // unknown
         0xa5,             // unknown magic byte
         0x01,             // PollingRate: index 1 -> 250 Hz
