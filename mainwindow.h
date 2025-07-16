@@ -28,15 +28,16 @@ private slots:
     void writeToDevice();
     void restoreDefaults();
     void selectLedColor();
+    void updateColorPickersVisibility(int index);
+    void selectLedPaletteColor(int colorIndex);
 
 private:
     // UI
     void setupUI();
-    QWidget* createActionsGroup();
-    QGroupBox* createPerformanceGroup();
-    QGroupBox* createLedGroup();
-    QGroupBox* createDpiEditorGroup();
-
+    QWidget* ActionsTab();
+    QWidget* PerformanceTab();
+    QWidget* LedTab();
+    QWidget* DpiEditorTab();
     QLabel* statusLabel;
 
     // advanced
@@ -52,6 +53,9 @@ private:
     QSlider* ledBrightnessSlider;
     QPushButton* ledColorButton;
     QLabel* ledColorSwatch;
+    QGroupBox* ledColorGroup; // Группа, объединяющая все селекторы цвета
+    std::vector<QPushButton*> ledColorButtons; // 7 кнопок "Select..."
+    std::vector<QLabel*> ledColorSwatches;      // 7 "образцов" цвета
 
     // DPI editor
     std::vector<QCheckBox*> dpiEnableChecks;
@@ -71,8 +75,9 @@ private:
     std::string workingDevicePath;
 
     // conversion maps
-    std::map<int, uint8_t> ledModeSpeedMap;
     std::map<std::string, int> ledModeIDs;
+    std::map<int, uint8_t> ledModeSpeedMap;
+    std::map<int, int> ledModeColorCount;
     std::map<int, int> pollingRateMapToHz;
     std::map<int, int> pollingRateHzToIndex;
     std::map<int, int> debounceMsToIndex;

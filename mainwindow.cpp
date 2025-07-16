@@ -61,45 +61,33 @@ MainWindow::~MainWindow()
     hid_exit();
 }
 
-void MainWindow::setupUI()
-{
-    setWindowTitle("ZET/ARDOR GAMING Edge configurator");
-    setMinimumSize(550, 600);
+void MainWindow::setupUI() {
+    setWindowTitle("ZET/ARDOR GAMING Edge Configurator");
+    setMinimumSize(500, 597);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    QHBoxLayout *topLayout = new QHBoxLayout();
+    QTabWidget *tabWidget = new QTabWidget();
 
-    QVBoxLayout *leftLayout = new QVBoxLayout();
-    leftLayout->addWidget(createPerformanceGroup());
-    leftLayout->addStretch();
+    tabWidget->addTab(DpiEditorTab(), "DPI");
+    tabWidget->addTab(LedTab(), "LED");
+    tabWidget->addTab(PerformanceTab(), "performance");
 
-    QVBoxLayout *rightLayout = new QVBoxLayout();
-    rightLayout->addWidget(createLedGroup());
-    rightLayout->addStretch();
+    mainLayout->addWidget(tabWidget);
+    mainLayout->addWidget(ActionsTab());
 
-    topLayout->addLayout(leftLayout);
-    topLayout->addLayout(rightLayout);
-
-    mainLayout->addLayout(topLayout);
-    mainLayout->addWidget(createDpiEditorGroup());
-
-    mainLayout->addStretch();
-
-    mainLayout->addWidget(createActionsGroup());
-
-    statusLabel = new QLabel("connect mouse.");
+    statusLabel = new QLabel("connect the mouse.");
     statusLabel->setWordWrap(true);
     mainLayout->addWidget(statusLabel);
 }
 
-QGroupBox* MainWindow::createDpiEditorGroup() {
-    QGroupBox *groupBox = new QGroupBox("DPI");
-    QGridLayout *layout = new QGridLayout;
+QWidget* MainWindow::DpiEditorTab() {
+    QWidget *tab = new QWidget();
+    QGridLayout *layout = new QGridLayout(tab);
 
-    layout->addWidget(new QLabel("ON/OFF"), 0, 0);
-    layout->addWidget(new QLabel("level"), 0, 1);
-    layout->addWidget(new QLabel("DPI value"), 0, 2, 1, 2);
+    layout->addWidget(new QLabel("ON/OFF"), 1, 0);
+    layout->addWidget(new QLabel("level"), 1, 1);
+    layout->addWidget(new QLabel("value"), 1, 2, 1, 2);
 
     dpiEnableChecks.resize(7);
     dpiValueSliders.resize(7);
@@ -111,31 +99,26 @@ QGroupBox* MainWindow::createDpiEditorGroup() {
         dpiValueSliders[i] = new QSlider(Qt::Horizontal);
         dpiValueSpinBoxes[i] = new QSpinBox();
 
-        dpiValueSliders[i]->setRange(2, 124); // 200/100, 12400/100
+        dpiValueSliders[i]->setRange(200, 12400);
+        dpiValueSliders[i]->setSingleStep(50);
         dpiValueSpinBoxes[i]->setRange(200, 12400);
-        dpiValueSpinBoxes[i]->setSingleStep(100);
+        dpiValueSpinBoxes[i]->setSingleStep(50);
 
-        connect(dpiValueSliders[i], &QSlider::valueChanged, this, [this, i](int value) {
-            QSignalBlocker blocker(dpiValueSpinBoxes[i]);
-            dpiValueSpinBoxes[i]->setValue(value * 100);
-        });
-        connect(dpiValueSpinBoxes[i], QOverload<int>::of(&QSpinBox::valueChanged), this, [this, i](int value) {
-            QSignalBlocker blocker(dpiValueSliders[i]);
-            dpiValueSliders[i]->setValue(value / 100);
-        });
+        connect(dpiValueSliders[i], &QSlider::valueChanged, dpiValueSpinBoxes[i], &QSpinBox::setValue);
+        connect(dpiValueSpinBoxes[i], QOverload<int>::of(&QSpinBox::valueChanged), dpiValueSliders[i], &QSlider::setValue);
 
-        layout->addWidget(dpiEnableChecks[i], i + 1, 0);
-        layout->addWidget(label, i + 1, 1);
-        layout->addWidget(dpiValueSliders[i], i + 1, 2);
-        layout->addWidget(dpiValueSpinBoxes[i], i + 1, 3);
+        layout->addWidget(dpiEnableChecks[i], i + 2, 0);
+        layout->addWidget(label, i + 2, 1);
+        layout->addWidget(dpiValueSliders[i], i + 2, 2);
+        layout->addWidget(dpiValueSpinBoxes[i], i + 2, 3);
     }
-
     layout->setColumnStretch(2, 1);
-    groupBox->setLayout(layout);
-    return groupBox;
+    layout->setRowStretch(layout->rowCount(), 1);
+
+    return tab;
 }
 
-QWidget* MainWindow::createActionsGroup() {
+QWidget* MainWindow::ActionsTab() {
     QWidget *actionsPanel = new QWidget();
     QHBoxLayout *layout = new QHBoxLayout(actionsPanel);
 
@@ -153,43 +136,48 @@ QWidget* MainWindow::createActionsGroup() {
     return actionsPanel;
 }
 
-QGroupBox* MainWindow::createPerformanceGroup() {
-    QGroupBox *groupBox = new QGroupBox("other");
-    QFormLayout *layout = new QFormLayout;
+QWidget* MainWindow::PerformanceTab() {
+    QWidget *tab = new QWidget();
+    QFormLayout *layout = new QFormLayout(tab);
 
     pollRateCombo = new QComboBox();
-    for(auto const& [hz, index] : pollingRateHzToIndex) {
-        pollRateCombo->addItem(QString::number(hz) + " Hz", QVariant(hz));
+    for(const auto& pair : pollingRateHzToIndex) {
+        pollRateCombo->addItem(QString::number(pair.first) + " Hz", QVariant(pair.first));
     }
 
     debounceCombo = new QComboBox();
-    vector<int> debounce_keys;
-    for(auto const& pair : debounceMsToIndex) debounce_keys.push_back(pair.first);
-    sort(debounce_keys.begin(), debounce_keys.end());
+    std::vector<int> debounce_keys;
+    for(const auto& pair : debounceMsToIndex) debounce_keys.push_back(pair.first);
+    std::sort(debounce_keys.begin(), debounce_keys.end());
     for(int ms : debounce_keys) {
         debounceCombo->addItem(QString::number(ms) + " ms", QVariant(ms));
     }
 
-    angleSnapCheck = new QCheckBox("angle snap");
+    angleSnapCheck = new QCheckBox("angle snapping");
     rippleControlCheck = new QCheckBox("ripple control");
 
-    layout->addRow("poll:", pollRateCombo);
+    layout->addRow("polling rate:", pollRateCombo);
     layout->addRow("debounce time:", debounceCombo);
     layout->addRow(angleSnapCheck);
     layout->addRow(rippleControlCheck);
 
-    groupBox->setLayout(layout);
-    return groupBox;
+    layout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+
+    return tab;
 }
 
-QGroupBox* MainWindow::createLedGroup() {
-    QGroupBox *groupBox = new QGroupBox("LED");
-    QFormLayout *layout = new QFormLayout;
+QWidget* MainWindow::LedTab() {
+    QWidget *tab = new QWidget();
+    QVBoxLayout *mainLedLayout = new QVBoxLayout(tab);
+
+    QGroupBox *settingsGroup = new QGroupBox("LED settings");
+    QFormLayout *settingsLayout = new QFormLayout;
 
     ledModeCombo = new QComboBox();
-    for(auto const& [name, id] : ledModeIDs) {
-        ledModeCombo->addItem(QString::fromStdString(name), QVariant(id));
+    for(const auto& pair : ledModeIDs) {
+        ledModeCombo->addItem(QString::fromStdString(pair.first), QVariant(pair.second));
     }
+    connect(ledModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::updateColorPickersVisibility);
 
     ledSpeedSlider = new QSlider(Qt::Horizontal);
     ledSpeedSlider->setRange(0, 2);
@@ -201,19 +189,38 @@ QGroupBox* MainWindow::createLedGroup() {
     ledBrightnessSlider->setTickPosition(QSlider::TicksBelow);
     ledBrightnessSlider->setTickInterval(1);
 
-    ledColorButton = new QPushButton("select color");
-    ledColorSwatch = new QLabel();
-    ledColorSwatch->setFixedSize(40, 20);
-    ledColorSwatch->setAutoFillBackground(true);
-    ledColorSwatch->setStyleSheet("border: 1px solid black;");
-    connect(ledColorButton, &QPushButton::clicked, this, &MainWindow::selectLedColor);
+    settingsLayout->addRow("mode:", ledModeCombo);
+    settingsLayout->addRow("speed:", ledSpeedSlider);
+    settingsLayout->addRow("brightness:", ledBrightnessSlider);
+    settingsGroup->setLayout(settingsLayout);
+    mainLedLayout->addWidget(settingsGroup);
 
-    layout->addRow("mode:", ledModeCombo);
-    layout->addRow("speed:", ledSpeedSlider);
-    layout->addRow("brightness:", ledBrightnessSlider);
+    ledColorGroup = new QGroupBox("color palette");
+    QGridLayout* colorLayout = new QGridLayout;
+    ledColorButtons.resize(7);
+    ledColorSwatches.resize(7);
 
-    groupBox->setLayout(layout);
-    return groupBox;
+    for(int i = 0; i < 7; ++i) {
+        QLabel* colorLabel = new QLabel(QString("color %1:").arg(i+1));
+        colorLayout->addWidget(colorLabel, i, 0);
+
+        ledColorSwatches[i] = new QLabel();
+        ledColorSwatches[i]->setFixedSize(40, 20);
+        ledColorSwatches[i]->setAutoFillBackground(true);
+
+        ledColorButtons[i] = new QPushButton("select...");
+        connect(ledColorButtons[i], &QPushButton::clicked, this, [this, i]() {
+            this->selectLedPaletteColor(i);
+        });
+
+        colorLayout->addWidget(ledColorSwatches[i], i, 1);
+        colorLayout->addWidget(ledColorButtons[i], i, 2);
+    }
+    ledColorGroup->setLayout(colorLayout);
+    mainLedLayout->addWidget(ledColorGroup);
+    mainLedLayout->addStretch();
+
+    return tab;
 }
 
 void MainWindow::writeToDevice()
@@ -250,6 +257,63 @@ void MainWindow::selectLedColor()
     if (color.isValid()) {
         palette.setColor(QPalette::Window, color);
         ledColorSwatch->setPalette(palette);
+    }
+}
+
+void MainWindow::updateColorPickersVisibility(int index) {
+    if (index < 0) return;
+
+    int modeId = ledModeCombo->itemData(index).toInt();
+
+    int colors_to_show = 0;
+    if (ledModeColorCount.count(modeId)) {
+        colors_to_show = ledModeColorCount.at(modeId);
+    }
+
+    if (colors_to_show == 0) {
+        ledColorGroup->setVisible(false);
+    } else {
+        ledColorGroup->setVisible(true);
+
+        QGridLayout *colorLayout = qobject_cast<QGridLayout*>(ledColorGroup->layout());
+        if (!colorLayout) {
+            // if for "some reason" layout is wrong type, exit for crash avoid
+            return;
+        }
+
+        for(int i = 0; i < 7; ++i) {
+            bool visible = (i < colors_to_show);
+
+            // hiding/showing entire row
+            if (auto item = colorLayout->itemAtPosition(i, 0)) {
+                if (auto widget = item->widget()) {
+                    widget->setVisible(visible);
+                }
+            }
+            if (auto item = colorLayout->itemAtPosition(i, 1)) {
+                if (auto widget = item->widget()) {
+                    widget->setVisible(visible);
+                }
+            }
+            if (auto item = colorLayout->itemAtPosition(i, 2)) {
+                if (auto widget = item->widget()) {
+                    widget->setVisible(visible);
+                }
+            }
+        }
+    }
+}
+
+void MainWindow::selectLedPaletteColor(int colorIndex) {
+    if (colorIndex < 0 || colorIndex >= 7) return;
+
+    QPalette palette = ledColorSwatches[colorIndex]->palette();
+    QColor initialColor = palette.color(QPalette::Window);
+    QColor color = QColorDialog::getColor(initialColor, this, QString("select color %1").arg(colorIndex + 1));
+
+    if (color.isValid()) {
+        palette.setColor(QPalette::Window, color);
+        ledColorSwatches[colorIndex]->setPalette(palette);
     }
 }
 
@@ -297,7 +361,7 @@ hid_device* MainWindow::findAndOpenDevice()
     hid_free_enumeration(devs);
 
     if (!opened_device) {
-        statusLabel->setText("error: mouse was found, but can't find working interface. have you set udev rules?");
+        statusLabel->setText("error: mouse found, but can't find working interface. have you set udev rules?");
     }
     return opened_device;
 }
@@ -373,7 +437,7 @@ void MainWindow::updateUiFromPayload(const std::vector<uint8_t>& payload)
     // blocking all signals at window as protection from recursive calls
     const QSignalBlocker blocker(this);
 
-    uint8_t poll_rate_index = payload[PollingRate];
+    int poll_rate_index = payload[PollingRate];
     if (pollingRateMapToHz.count(poll_rate_index)) {
         int poll_hz = pollingRateMapToHz.at(poll_rate_index);
         int combo_index = pollRateCombo->findData(poll_hz);
@@ -411,7 +475,20 @@ void MainWindow::updateUiFromPayload(const std::vector<uint8_t>& payload)
     ledSpeedSlider->setValue(speed_key);
     ledBrightnessSlider->setValue(payload[LEDBrightness]);
 
-    // ура костыли
+    // updating colors in UI palette
+    for (int i = 0; i < 7; ++i) {
+        size_t offset = DPIColorsStart + (i * 3);
+        if (offset + 2 < payload.size()) {
+            uint8_t r = payload[offset];
+            uint8_t g = payload[offset + 1];
+            uint8_t b = payload[offset + 2];
+            QPalette p;
+            p.setColor(QPalette::Window, QColor(r, g, b));
+            ledColorSwatches[i]->setPalette(p);
+        }
+    }
+
+    // ура костыли!
     dpiValueSpinBoxes[0]->setValue(400);
     dpiValueSpinBoxes[1]->setValue(800);
     dpiValueSpinBoxes[2]->setValue(1200);
@@ -424,6 +501,8 @@ void MainWindow::updateUiFromPayload(const std::vector<uint8_t>& payload)
     for (int i = 0; i < 7; ++i) {
         dpiEnableChecks[i]->setChecked((dpi_mask >> i) & 0x01);
     }
+
+    updateColorPickersVisibility(ledModeCombo->currentIndex());
 }
 
 void MainWindow::updatePayloadFromUi()
@@ -449,43 +528,62 @@ void MainWindow::updatePayloadFromUi()
     }
     currentPayloadState[DPIEnableMask] = dpi_mask;
 
-    // polling
+    // advanced
     int poll_hz = pollRateCombo->currentData().toInt();
     currentPayloadState[PollingRate] = static_cast<uint8_t>(pollingRateHzToIndex.at(poll_hz));
 
-    // sensor flags
     uint8_t& sensor_flags = currentPayloadState[SensorPerf];
-    if (angleSnapCheck->isChecked()) sensor_flags |= 0x01; else sensor_flags &= ~0x01;
-    if (rippleControlCheck->isChecked()) sensor_flags |= 0x02; else sensor_flags &= ~0x02;
+    sensor_flags &= ~0x03; // resetting anglesnap and ripple bits
+    if (angleSnapCheck->isChecked()) sensor_flags |= 0x01;
+    if (rippleControlCheck->isChecked()) sensor_flags |= 0x02;
     int debounce_ms = debounceCombo->currentData().toInt();
-    sensor_flags &= ~(0x3F << 2);
+    sensor_flags &= ~(0x3F << 2); // resetting debounce bits
     sensor_flags |= (static_cast<uint8_t>(debounceMsToIndex.at(debounce_ms)) << 2);
 
-    // led backlight
+    // LED
     int mode_id = ledModeCombo->currentData().toInt();
     currentPayloadState[LEDModeID] = static_cast<uint8_t>(mode_id);
     currentPayloadState[LEDSpeed] = ledModeSpeedMap.at(ledSpeedSlider->value());
     currentPayloadState[LEDBrightness] = static_cast<uint8_t>(ledBrightnessSlider->value());
 
-    // palette flag
-    uint8_t palette_flag = 0x7f;
-    if (mode_id == 1 || mode_id == 4) palette_flag = 0x01; // breathe, tail
-    else if (mode_id == 2 || mode_id == 8) palette_flag = 0x00; // steady, heart
-    else if (mode_id == 5) palette_flag = 0x4f; // colorful_tail
+    // setting palette flag depending on mode
+    uint8_t palette_flag = 0x7f; // default for modes without color set
+    if (ledModeColorCount.count(mode_id)) {
+        int color_count = ledModeColorCount.at(mode_id);
+        if (color_count == 1) {
+            // for Steady and Heart flag is 0x00
+            // for Breathe and Tail modes flag is 0x01
+            if (mode_id == 1 || mode_id == 4) palette_flag = 0x01;
+            else if (mode_id == 2 || mode_id == 8) palette_flag = 0x00;
+        } else if (mode_id == 5) { // Colorful Tail
+            palette_flag = 0x4f;
+        }
+    }
     currentPayloadState[LEDPaletteFlag] = palette_flag;
+
+    // writing colors from palette to the payload
+    for (int i = 0; i < 7; ++i) {
+        QColor color = ledColorSwatches[i]->palette().color(QPalette::Window);
+        size_t offset = DPIColorsStart + (i * 3);
+        if (offset + 2 < currentPayloadState.size()) {
+            currentPayloadState[offset]     = static_cast<uint8_t>(color.red());
+            currentPayloadState[offset + 1] = static_cast<uint8_t>(color.green());
+            currentPayloadState[offset + 2] = static_cast<uint8_t>(color.blue());
+        }
+    }
 }
 
 vector<uint8_t> MainWindow::factorySettingsPayload() {
     return {
         0xa0, 0x01, 0x02, // WriteCFG command
-        0x00,             // ActiveDPIIndex: active level 2
+        0x01,             // ActiveDPIIndex: active level 2
         0x02,             // unknown
-        0xa5,             // unknown magic byte
+        0xa5,             // magic byte
         0x01,             // PollingRate: index 1 -> 250 Hz
         0x7f,             // DPIEnableMask: 01111111 -> all 7 levels are enabled
         0x00,             // unknown
 
-        // DPI levels at custom 3-byte format
+        // DPI levels
         0x09, 0x09, 0x00, // 1 level (400 DPI)
         0x12, 0x12, 0x00, // 2 level (800 DPI)
         0x1b, 0x1b, 0x00, // 3 level (1200 DPI)
@@ -498,16 +596,16 @@ vector<uint8_t> MainWindow::factorySettingsPayload() {
         0x00, 0x00, 0x02, // unknown
         0x18,             // AngleLOD: AngleAdj=6, LOD=0
         0x14,             // SensorPerf: Debounce=12ms, Snap/Ripple=OFF
-        0xa5,             // unknown magic byte
+        0xa5,             // magic byte
 
         // led parameters
-        0x00,             // LEDModeID: mode 0 -> "prismo"
-        0x01,             // LEDSpeed: speed "medium"
+        0x00,             // LEDModeID: mode 0 - prismo
+        0x01,             // LEDSpeed: medium
         0x0a,             // LEDBrightness: brightness 10
         0x01,             // unknown
-        0x7f,             // LEDPaletteFlag: flag for "prismo"
+        0x7f,             // LEDPaletteFlag
 
-        // DPI level colors
+        // default color palette
         0xff, 0x00, 0x00, // red
         0x00, 0xff, 0x00, // green
         0x00, 0x00, 0xff, // blue
@@ -523,8 +621,21 @@ vector<uint8_t> MainWindow::factorySettingsPayload() {
 
 void MainWindow::initializeMaps() {
     ledModeSpeedMap = {{0, 0x02}, {1, 0x01}, {2, 0x00}};
-    ledModeIDs = {{"prismo", 0}, {"breathe", 1}, {"steady", 2}, {"neon", 3}, {"tail", 4}, {"colorful_tail", 5}, {"stream", 6}, {"reaction", 7}, {"heart", 8}, {"off", 9}};
+    ledModeIDs = {{"Prismo", 0}, {"Breathe", 1}, {"Steady", 2}, {"Neon", 3}, {"Tail", 4}, {"Colorful Tail", 5}, {"Stream", 6}, {"Reaction", 7}, {"Heart", 8}, {"OFF", 9}};
     pollingRateMapToHz = {{0, 125}, {1, 250}, {2, 500}, {3, 1000}};
     for (const auto& pair : pollingRateMapToHz) { pollingRateHzToIndex[pair.second] = pair.first; }
     for (int i = 0; i < 15; ++i) { int ms = (i + 1) * 2; debounceMsToIndex[ms] = i; debounceIndexToMs[i] = ms; }
+
+    ledModeColorCount = {
+        {0, 0}, // prismo
+        {1, 1}, // breathe
+        {2, 1}, // steady
+        {3, 0}, // neon
+        {4, 1}, // tail
+        {5, 7}, // colorful tail
+        {6, 0}, // stream
+        {7, 7}, // reaction
+        {8, 1}, // heart
+        {9, 0}  // off
+    };
 }
