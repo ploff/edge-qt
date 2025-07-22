@@ -19,19 +19,34 @@
 
 using namespace std;
 
-const map<int, uint8_t> DpiToWriteValue = {
-    {400, 0x09},   {800, 0x12},   {1200, 0x1b}, {1500, 0x22},
-    {1800, 0x29},  {2000, 0x2e},  {2100, 0x30}, {2400, 0x37},
-    {3000, 0x45},  {3200, 0x4a},  {6200, 0x91}, {12400, 0x94}
+const map <int, uint8_t>&getDpiTable() {
+    static const map<int, uint8_t> DpiTable = {
+        {200, 0x04}, {300, 0x06}, {400, 0x09}, {500, 0x0b}, {600, 0x0e},
+        {700, 0x12}, {800, 0x15}, {900, 0x18}, {1000, 0x1a}, {1100, 0x1c},
+        {1200, 0x1b}, {1300, 0x20}, {1400, 0x22}, {1500, 0x24}, {1600, 0x26},
+        {1700, 0x27}, {1800, 0x29}, {1900, 0x2b}, {2000, 0x2e}, {2100, 0x30},
+        {2200, 0x32}, {2300, 0x34}, {2400, 0x37}, {2500, 0x39}, {2600, 0x3b},
+        {2700, 0x3e}, {2800, 0x40}, {2900, 0x42}, {3000, 0x45}, {3100, 0x48},
+        {3200, 0x4a}, {3300, 0x4d}, {3400, 0x4e}, {3500, 0x51}, {3600, 0x54},
+        {3700, 0x55}, {3800, 0x58}, {3900, 0x5b}, {4000, 0x5d}, {4100, 0x5f},
+        {4200, 0x62}, {4300, 0x64}, {4400, 0x66}, {4500, 0x69}, {4600, 0x6b},
+        {4700, 0x6d}, {4800, 0x70}, {4900, 0x72}, {5000, 0x74}, {5100, 0x77},
+        {5200, 0x79}, {5300, 0x7b}, {5400, 0x7e}, {5500, 0x80}, {5600, 0x82},
+        {5700, 0x85}, {5800, 0x87}, {5900, 0x89}, {6000, 0x8c}, {6100, 0x8e},
+        {6200, 0x91}, {12400, 0x94}
+    };
+    return DpiTable;
 };
 
 int findClosestSupportedDpi(int targetDpi) {
-    if (DpiToWriteValue.count(targetDpi)) {
+    const auto& DpiTable = getDpiTable();
+
+    if (DpiTable.count(targetDpi)) {
         return targetDpi;
     }
     int closestDpi = -1;
     int minDiff = 100000;
-    for (const auto& pair : DpiToWriteValue) {
+    for (const auto& pair : DpiTable) {
         int diff = abs(pair.first - targetDpi);
         if (diff < minDiff) {
             minDiff = diff;
@@ -40,6 +55,7 @@ int findClosestSupportedDpi(int targetDpi) {
     }
     return closestDpi;
 }
+
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
 {
@@ -63,7 +79,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI() {
     setWindowTitle("ZET/ARDOR GAMING Edge Configurator");
-    setMinimumSize(500, 597);
+    setMinimumSize(700, 597);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
@@ -100,9 +116,9 @@ QWidget* MainWindow::DpiEditorTab() {
         dpiValueSpinBoxes[i] = new QSpinBox();
 
         dpiValueSliders[i]->setRange(200, 12400);
-        dpiValueSliders[i]->setSingleStep(50);
+        dpiValueSliders[i]->setSingleStep(100);
         dpiValueSpinBoxes[i]->setRange(200, 12400);
-        dpiValueSpinBoxes[i]->setSingleStep(50);
+        dpiValueSpinBoxes[i]->setSingleStep(100);
 
         connect(dpiValueSliders[i], &QSlider::valueChanged, dpiValueSpinBoxes[i], &QSpinBox::setValue);
         connect(dpiValueSpinBoxes[i], QOverload<int>::of(&QSpinBox::valueChanged), dpiValueSliders[i], &QSlider::setValue);
@@ -146,9 +162,9 @@ QWidget* MainWindow::PerformanceTab() {
     }
 
     debounceCombo = new QComboBox();
-    std::vector<int> debounce_keys;
+    vector<int> debounce_keys;
     for(const auto& pair : debounceMsToIndex) debounce_keys.push_back(pair.first);
-    std::sort(debounce_keys.begin(), debounce_keys.end());
+    sort(debounce_keys.begin(), debounce_keys.end());
     for(int ms : debounce_keys) {
         debounceCombo->addItem(QString::number(ms) + " ms", QVariant(ms));
     }
@@ -432,7 +448,7 @@ bool MainWindow::sendHidReport(const vector<uint8_t>& payload_data)
     return true;
 }
 
-void MainWindow::updateUiFromPayload(const std::vector<uint8_t>& payload)
+void MainWindow::updateUiFromPayload(const vector<uint8_t>& payload)
 {
     // blocking all signals at window as protection from recursive calls
     const QSignalBlocker blocker(this);
@@ -519,7 +535,7 @@ void MainWindow::updatePayloadFromUi()
             dpiValueSpinBoxes[i]->setValue(supported_dpi);
         }
 
-        uint8_t raw_value = DpiToWriteValue.at(supported_dpi);
+        uint8_t raw_value = getDpiTable().at(supported_dpi);
 
         size_t offset = DPIValuesStart + (i * 3);
         currentPayloadState[offset] = raw_value;
